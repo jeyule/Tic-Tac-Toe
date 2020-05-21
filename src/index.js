@@ -2,27 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
-class Square extends React.Component {
-
-    //use a state to "remember" whether the square got clicked
-    constructor(props) {
-        super(props);
-        this.state = {
-            value: null,
-        };
+    //square function that takes props as input and returns what to render
+    function Square(props) {
+        return (
+            <button className="square" onClick =
+                {props.onClick}>
+                {props.value}
+            </button>
+        );
     }
-
-    render() {
-      return (
-        //when square clicked, onclick function in Board is called
-        <button className="square" 
-            onClick={() => this.props.onClick()}>
-            
-            {this.props.value}
-        </button>
-      );
-    }
-  }
   
   class Board extends React.Component {
 
@@ -31,15 +19,28 @@ class Square extends React.Component {
         super(props);
 
         //initial state is 9 blank squares
+        //x goes first by default
         this.state = {
             squares: Array(9).fill(null),
+            xIsNext: true,
         };
     }
 
     handleClick(i) {
         const squares = this.state.squares.slice();
-        squares[i] = 'X';
-        this.setState({squares: squares});
+        
+        //ignore clicks if game has ended or square is already filled
+        if (calculateWinner(squares) || squares[i]) {
+            return;
+        }
+        
+        //mark as 'X' or 'O' depending on whose turn it is
+        squares[i] = this.state.xIsNext ? 'X' : 'O';
+        this.setState({
+            squares: squares,
+            //flip each turn
+            xIsNext: !this.state.xIsNext,
+        });
     }
 
     renderSquare(i) {
@@ -54,7 +55,17 @@ class Square extends React.Component {
     }
   
     render() {
-      const status = 'Next player: X';
+        const winner = 
+            calculateWinner(this.state.squares);
+            
+            let status;
+            if (winner) {
+                //display winner if game ended
+                status = 'Winner: ' + winner;
+            } else {
+                //display which player has the turn
+                status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
+            }
   
       return (
         <div>
@@ -93,6 +104,27 @@ class Square extends React.Component {
         </div>
       );
     }
+  }
+
+  //determines if someone has filled a whole line and won
+  function calculateWinner(squares) {
+    const lines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
+    ];
+    for (let i = 0; i < lines.length; i++) {
+      const [a, b, c] = lines[i];
+      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+        return squares[a];
+      }
+    }
+    return null;
   }
   
   // ========================================
