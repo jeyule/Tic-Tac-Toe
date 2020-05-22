@@ -13,63 +13,20 @@ import './index.css';
     }
   
   class Board extends React.Component {
-
-    //store the game's state in the Board
-    constructor(props) {
-        super(props);
-
-        //initial state is 9 blank squares
-        //x goes first by default
-        this.state = {
-            squares: Array(9).fill(null),
-            xIsNext: true,
-        };
-    }
-
-    handleClick(i) {
-        const squares = this.state.squares.slice();
-        
-        //ignore clicks if game has ended or square is already filled
-        if (calculateWinner(squares) || squares[i]) {
-            return;
-        }
-        
-        //mark as 'X' or 'O' depending on whose turn it is
-        squares[i] = this.state.xIsNext ? 'X' : 'O';
-        this.setState({
-            squares: squares,
-            //flip each turn
-            xIsNext: !this.state.xIsNext,
-        });
-    }
-
     renderSquare(i) {
         //pass down a function from board to square and have
         //square call this function when a square is clicked
         return (
             <Square 
-                value = {this.state.squares[i]}
-                onClick = {() => this.handleClick(i)}
+                value = {this.props.squares[i]}
+                onClick = {() => this.props.onClick(i)}
             />
         );
     }
   
-    render() {
-        const winner = 
-            calculateWinner(this.state.squares);
-            
-            let status;
-            if (winner) {
-                //display winner if game ended
-                status = 'Winner: ' + winner;
-            } else {
-                //display which player has the turn
-                status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
-            }
-  
+    render() {  
       return (
         <div>
-          <div className="status">{status}</div>
           <div className="board-row">
             {this.renderSquare(0)}
             {this.renderSquare(1)}
@@ -91,15 +48,92 @@ import './index.css';
   }
   
   class Game extends React.Component {
+
+    constructor(props) {
+        super(props);
+
+        //store the past arrays of squares in history
+        this.state = {
+            history: [{
+                squares: Array(9).fill(null),
+            }],
+            stepNumber: 0,
+            xIsNext: true,
+        }
+    }
+
+    handleClick(i) {
+        //slice creates a new copy of squares array after every move
+        //this helps with store the history of moves
+        //if going back, throw away the false future moves
+        const history = this.state.history.slice(0, this.state.stepNumber + 1);
+        const current = history[history.length - 1];
+        const squares = current.squares.slice();
+        
+        //ignore clicks if game has ended or square is already filled
+        if (calculateWinner(squares) || squares[i]) {
+            return;
+        }
+
+        //mark as 'X' or 'O' depending on whose turn it is
+        squares[i] = this.state.xIsNext ? 'X' : 'O';
+        this.setState({
+            history: history.concat([{
+                squares: squares,
+            }]),
+            //flip each turn
+            stepNumber: history.length,
+            xIsNext: !this.state.xIsNext,
+        });
+    }
+
+    jumpTo(step) {
+        this.setState({
+            stepNumber: step,
+            xIsNext: (step % 2) === 0,
+        });
+    }
+
     render() {
+        const history = this.state.history;
+        const current = history[this.state.stepNumber];
+        const winner = calculateWinner(current.squares);
+
+        //map over the history
+        //for each move, list item created which contains a button
+        const moves = history.map((step, move) => {
+            const desc = move ?
+                'Go to move #' + move :
+                'Go to game start';
+            return (
+                <li key = {move}>
+                    <button onClick={() => this.jumpTo(move)}>
+                        {desc}
+                    </button>
+                </li>
+            );
+        });
+        
+        let status;
+        if (winner) {
+            //display winner if game ended
+            status = 'Winner: ' + winner;
+        } else {
+            //display which player has the turn
+            status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
+        }
+
       return (
         <div className="game">
           <div className="game-board">
-            <Board />
+            <Board 
+                squares={current.squares}
+                onClick={(i) => this.handleClick(i)}
+            />
           </div>
           <div className="game-info">
-            <div>{/* status */}</div>
-            <ol>{/* TODO */}</ol>
+            <div>{status}</div>
+            <ol>{moves}</ol>
           </div>
         </div>
       );
